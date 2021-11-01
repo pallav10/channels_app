@@ -1,5 +1,6 @@
 # Run ``pip install websockets`` before importing the library.
 # !/usr/bin/env python3
+import os
 from asyncio import gather, get_event_loop
 
 import websockets
@@ -9,10 +10,10 @@ from aioconsole import ainput
 
 from channels_app.encryption_util import Encryptor
 
-
 # establishes a connection / instantiates the client.
 # The client is actually an awaiting function that yields an
 # object which can then be used to send and receive messages.
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "duplex_sys.settings")
 
 
 class WebSocketClient(object):
