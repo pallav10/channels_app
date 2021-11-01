@@ -34,30 +34,12 @@ def rearrange_array(A):
             swap(A, i + 1, i)
 
 
-class RearrangeNumbersConsumer(AsyncWebsocketConsumer):
+class RearrangeNumbersApp(AsyncWebsocketConsumer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.chat_id = None
+        self.room_group_name = None
 
-    # Receive message from WebSocket
-    async def websocket_receive(self, message):
-        list_of_numbers = list(sorted(map(int, message.get("text", "").split())))
-        rearrange_array(list_of_numbers)
-        message = json.dumps(dict(rearranged_array=list_of_numbers))
-
-        # Send message to room group
-        await self.receive(text_data=message)
-
-    async def disconnect(self, close_code):
-        # Leave room group
-        await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
-
-    # Receive message from room group
-    async def chat_message(self, event):
-        message = event["message"]
-
-        # Send message to WebSocket
-        await self.send(text_data=json.dumps({"message": message}))
-
-
-class RearrangeNumbersApp(RearrangeNumbersConsumer):
     async def connect(self):
         self.chat_id = self.scope["url_route"]["kwargs"]["chat_id"]
         self.room_group_name = "chat_%s" % self.chat_id
@@ -65,7 +47,33 @@ class RearrangeNumbersApp(RearrangeNumbersConsumer):
         # Join room group
         await self.channel_layer.group_add(self.room_group_name, self.channel_name)
 
-        await super(RearrangeNumbersConsumer, self).connect()
+        await self.accept()
 
-    async def receive(self, text_data=None, bytes_data=None):
-        await self.send(text_data=text_data, bytes_data=bytes_data, close=True)
+    # Receive message from WebSocket
+    async def websocket_receive(self, message):
+        # Send message to room group
+        self.chat_id = self.scope["url_route"]["kwargs"]["chat_id"]
+        self.room_group_name = "chat_%s" % self.chat_id
+        await self.receive(text_data=message["text"])
+
+    async def disconnect(self, close_code):
+        await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
+
+    async def receive(self, text_data="", bytes_data=None):
+        list_of_numbers = list(sorted(map(int, text_data.split())))
+        rearrange_array(list_of_numbers)
+        message = json.dumps(dict(message=list_of_numbers))
+        await self.channel_layer.group_send(
+            self.room_group_name,
+            {
+                "type": "send_rearranged",
+                "message": message,
+            },
+        )
+
+    # Receive message from room group
+    async def send_rearranged(self, event):
+        message = event["message"]
+        # Send message to WebSocket
+        print(self.room_group_name)
+        await self.send(text_data=message)

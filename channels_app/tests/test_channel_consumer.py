@@ -54,7 +54,7 @@ class TestWebSocket(TestCase):
         await communicator.send_to(text_data="1 2 3 4 5 6 7 8")
         response = await communicator.receive_from()
         response = json.loads(response)
-        self.assertEqual(response, {"rearranged_array": [1, 3, 2, 5, 4, 7, 6, 8]})
+        self.assertEqual(response, {"message": [1, 3, 2, 5, 4, 7, 6, 8]})
         # Close out
         await communicator.disconnect()
 
@@ -69,7 +69,7 @@ class TestWebSocket(TestCase):
         await communicator1.send_to(text_data="1 2 3 4 5 6 7 8")
         response1 = await communicator1.receive_from()
         response1 = json.loads(response1)
-        self.assertEqual(response1, {"rearranged_array": [1, 3, 2, 5, 4, 7, 6, 8]})
+        self.assertEqual(response1, {"message": [1, 3, 2, 5, 4, 7, 6, 8]})
 
         # connect second communicator
         communicator2 = self.make_communicator(3)
@@ -81,9 +81,7 @@ class TestWebSocket(TestCase):
         await communicator2.send_to(text_data="10 11 12 13 14 15 16 17 18")
         response2 = await communicator2.receive_from()
         response2 = json.loads(response2)
-        self.assertEqual(
-            response2, {"rearranged_array": [10, 12, 11, 14, 13, 16, 15, 18, 17]}
-        )
+        self.assertEqual(response2, {"message": [10, 12, 11, 14, 13, 16, 15, 18, 17]})
         # Close out communicator1
         await communicator1.disconnect()
         await communicator2.disconnect()
@@ -105,15 +103,13 @@ class TestWebSocket(TestCase):
         await communicator2.send_to(text_data="10 11 12 13 14 15 16 17 18")
         response2 = await communicator2.receive_from()
         response2 = json.loads(response2)
-        self.assertEqual(
-            response2, {"rearranged_array": [10, 12, 11, 14, 13, 16, 15, 18, 17]}
-        )
+        self.assertEqual(response2, {"message": [10, 12, 11, 14, 13, 16, 15, 18, 17]})
 
         # Test sending text for 1st communicator
         await communicator1.send_to(text_data="1 2 3 4 5 6 7 8")
         response1 = await communicator1.receive_from()
         response1 = json.loads(response1)
-        self.assertEqual(response1, {"rearranged_array": [1, 3, 2, 5, 4, 7, 6, 8]})
+        self.assertEqual(response1, {"message": [1, 3, 2, 5, 4, 7, 6, 8]})
 
         # Close out communicator1
         await communicator1.disconnect()
