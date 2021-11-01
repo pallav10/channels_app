@@ -1,8 +1,6 @@
 import json
-import websocket
 
-# import _thread
-import time
+import websocket
 
 
 def on_message(ws, message):
@@ -12,6 +10,7 @@ def on_message(ws, message):
     else:
         print("message is ", json.loads(message).get("message"))
         on_open(ws)
+
 
 def on_error(ws, error):
     print(error)

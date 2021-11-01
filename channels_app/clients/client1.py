@@ -13,16 +13,27 @@ from aioconsole import ainput
 # The client is also as an asynchronous context manager.
 async def socket_func():
     connection = websockets.connect(uri="ws://127.0.0.1:8080/ws/rearrange/1")
-    async with connection as websocket:
-        # Sends a message.
-        await websocket.send(await ainput("Enter numbers separated by spaces: "))
 
-        # Receives the replies.
-        async for message in websocket:
-            print(message)
+    async def keep_alive(can_close=False, message=""):
+        async with connection as websocket:
+            # Sends a message.
+            await websocket.send(message)
+
+            # Receives the replies.
+            async for message in websocket:
+                print(message)
+                if not can_close:
+                    break
+                else:
+                    print("CLOSED")
+                    await websocket.close()
 
         # Closes the connection.
-        await websocket.close()
+
+    for i in range(2):
+        ip = await ainput("Enter numbers separated by spaces: ")
+        close = True if i == 1 else False
+        await keep_alive(can_close=close, message=ip)
 
 
 def main():
