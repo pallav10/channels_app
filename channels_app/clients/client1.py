@@ -1,43 +1,47 @@
 # Run ``pip install websockets`` before importing the library.
 # !/usr/bin/env python3
-import asyncio
+from asyncio import gather, get_event_loop
 
 import websockets
+
+# The client is also as an asynchronous context manager.
 from aioconsole import ainput
 
 
-# establishes a connection / intantes the client.
+# establishes a connection / instantiates the client.
 # The client is actually an awaiting function that yields an
 # object which can then be used to send and receive messages.
 
-# The client is also as an asynchronous context manager.
+
 async def socket_func():
     connection = websockets.connect(uri="ws://127.0.0.1:8080/ws/rearrange/1")
 
-    async def keep_alive(can_close=False, message=""):
-        async with connection as websocket:
-            # Sends a message.
-            await websocket.send(message)
+    async def send_messages(websocket):
+        # Sends a message.
+        message = await ainput()
+        if message in ["exit", "quit"]:
+            await websocket.close()
+        await websocket.send(message)
+        await get_replies(websocket, take_new_input=True)
 
-            # Receives the replies.
+    async def get_replies(websocket, take_new_input=False):
+        # Receives the replies.
+        if not take_new_input:
             async for message in websocket:
                 print(message)
-                if not can_close:
-                    break
-                else:
-                    print("CLOSED")
-                    await websocket.close()
+        if take_new_input:
+            await send_messages(websocket)
 
-        # Closes the connection.
+    async def multiple(websocket):
+        tasks = [send_messages(websocket), get_replies(websocket)]
+        await gather(*tasks)
 
-    for i in range(2):
-        ip = await ainput("Enter numbers separated by spaces: ")
-        close = True if i == 1 else False
-        await keep_alive(can_close=close, message=ip)
+    async with connection as websocket:
+        await multiple(websocket)
 
 
 def main():
-    loop = asyncio.get_event_loop()
+    loop = get_event_loop()
     loop.run_until_complete(socket_func())
     loop.close()
 

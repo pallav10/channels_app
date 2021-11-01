@@ -3,11 +3,12 @@
 from asyncio import gather, get_event_loop
 
 import websockets
+
 # The client is also as an asynchronous context manager.
 from aioconsole import ainput
 
 
-# establishes a connection / intantes the client.
+# establishes a connection / instantiates the client.
 # The client is actually an awaiting function that yields an
 # object which can then be used to send and receive messages.
 
@@ -15,31 +16,28 @@ from aioconsole import ainput
 async def socket_func():
     connection = websockets.connect(uri="ws://127.0.0.1:8080/ws/rearrange/4")
 
-    async def take_input():
-        async with connection as websocket:
-            # Sends a message.
-            await websocket.send(await ainput())
-            await print_message(take_new_input=True)
+    async def send_messages(websocket):
+        # Sends a message.
+        message = await ainput()
+        if message in ["exit", "quit"]:
+            await websocket.close()
+        await websocket.send(message)
+        await get_replies(websocket, take_new_input=True)
 
-    async def print_message(take_new_input=False):
-        async with connection as websocket:
-            # Sends a message.
+    async def get_replies(websocket, take_new_input=False):
+        # Receives the replies.
+        if not take_new_input:
+            async for message in websocket:
+                print(message)
+        if take_new_input:
+            await send_messages(websocket)
 
-            # Receives the replies.
-            if not take_new_input:
-                async for message in websocket:
-                    print(message)
-            if take_new_input:
-                await take_input()
-
-    async def multiple():
-        tasks = [take_input(), print_message()]
+    async def multiple(websocket):
+        tasks = [send_messages(websocket), get_replies(websocket)]
         await gather(*tasks)
-        # Closes the connection.
-        # await websocket.close()
 
-    while True:
-        await multiple()
+    async with connection as websocket:
+        await multiple(websocket)
 
 
 def main():

@@ -1,32 +1,47 @@
 # Run ``pip install websockets`` before importing the library.
 # !/usr/bin/env python3
-import asyncio
+from asyncio import gather, get_event_loop
 
 import websockets
+
+# The client is also as an asynchronous context manager.
 from aioconsole import ainput
 
 
-# establishes a connection / intantes the client.
+# establishes a connection / instantiates the client.
 # The client is actually an awaiting function that yields an
 # object which can then be used to send and receive messages.
 
-# The client is also as an asynchronous context manager.
+
 async def socket_func():
     connection = websockets.connect(uri="ws://127.0.0.1:8080/ws/rearrange/2")
-    async with connection as websocket:
+
+    async def send_messages(websocket):
         # Sends a message.
-        await websocket.send(await ainput("Enter numbers separated by spaces: "))
+        message = await ainput()
+        if message in ["exit", "quit"]:
+            await websocket.close()
+        await websocket.send(message)
+        await get_replies(websocket, take_new_input=True)
 
+    async def get_replies(websocket, take_new_input=False):
         # Receives the replies.
-        async for message in websocket:
-            print(message)
+        if not take_new_input:
+            async for message in websocket:
+                print(message)
+        if take_new_input:
+            await send_messages(websocket)
 
-        # Closes the connection.
-        await websocket.close()
+    async def multiple(websocket):
+        tasks = [send_messages(websocket), get_replies(websocket)]
+        await gather(*tasks)
+
+    async with connection as websocket:
+        await multiple(websocket)
 
 
 def main():
-    loop = asyncio.get_event_loop()
+    loop = get_event_loop()
     loop.run_until_complete(socket_func())
     loop.close()
 
