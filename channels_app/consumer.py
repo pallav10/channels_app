@@ -4,11 +4,9 @@ import json
 # Third Party imports.
 from channels.generic.websocket import AsyncWebsocketConsumer
 
+from channels_app.encryption_util import Encryptor
 
-# Django imports.
 
-
-# Local imports.
 def swap(Arr, i, j):
     """
     Utility function to swap elements `A[i]` and `A[j]` in the list
@@ -46,8 +44,9 @@ class RearrangeNumbersApp(AsyncWebsocketConsumer):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.chat_id = None
+        self.connection_id = None
         self.room_group_name = None
+        self.encryptor = None
 
     async def connect(self):
         """
@@ -55,6 +54,7 @@ class RearrangeNumbersApp(AsyncWebsocketConsumer):
         """
         self.chat_id = self.scope["url_route"]["kwargs"]["chat_id"]
         self.room_group_name = "chat_%s" % self.chat_id
+        self.encryptor = Encryptor()
 
         # Join room group
         await self.channel_layer.group_add(self.room_group_name, self.channel_name)
@@ -67,7 +67,8 @@ class RearrangeNumbersApp(AsyncWebsocketConsumer):
         Receives messages from clients
         """
         # Send message to room group
-        await self.receive(text_data=message["text"])
+        decrypted_message = self.encryptor.decrypt(message["text"])
+        await self.receive(text_data=decrypted_message)
 
     async def disconnect(self, close_code):
         """
@@ -82,11 +83,12 @@ class RearrangeNumbersApp(AsyncWebsocketConsumer):
         list_of_numbers = list(sorted(map(int, text_data.split())))
         rearrange_array(list_of_numbers)
         message = json.dumps(dict(message=list_of_numbers))
+        encrypted_message = self.encryptor.encrypt(message)
         await self.channel_layer.group_send(
             self.room_group_name,
             {
                 "type": "send_rearranged",
-                "message": message,
+                "message": encrypted_message,
             },
         )
 

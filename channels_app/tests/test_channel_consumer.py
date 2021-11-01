@@ -11,6 +11,7 @@ from django.test import TestCase, override_settings
 from django.urls import path
 
 from channels_app.consumer import RearrangeNumbersApp
+from channels_app.encryption_util import Encryptor
 
 TEST_CHANNEL_LAYERS = {
     "default": {
@@ -37,6 +38,7 @@ class TestWebSocket(TestCase):
                 [path("ws/rearrange/<int:chat_id>", SimpleWebsocketApp.as_asgi())]
             )
         )
+        self.encryptor = Encryptor()
         cache.clear()
 
     def make_communicator(self, channel_id):
@@ -51,9 +53,12 @@ class TestWebSocket(TestCase):
         assert connected
         assert subprotocol is None
         # Test sending text
-        await communicator.send_to(text_data="1 2 3 4 5 6 7 8")
-        response = await communicator.receive_from()
-        response = json.loads(response)
+        message = "1 2 3 4 5 6 7 8"
+        encrypted_message = self.encryptor.encrypt(message)
+        await communicator.send_to(text_data=encrypted_message)
+        received_message = await communicator.receive_from()
+        decrypted_response = self.encryptor.decrypt(received_message)
+        response = json.loads(decrypted_response)
         self.assertEqual(response, {"message": [1, 3, 2, 5, 4, 7, 6, 8]})
         # Close out
         await communicator.disconnect()
@@ -66,9 +71,12 @@ class TestWebSocket(TestCase):
         assert connected
         assert subprotocol is None
         # Test sending text
-        await communicator1.send_to(text_data="1 2 3 4 5 6 7 8")
-        response1 = await communicator1.receive_from()
-        response1 = json.loads(response1)
+        message = "1 2 3 4 5 6 7 8"
+        encrypted_message = self.encryptor.encrypt(message)
+        await communicator1.send_to(text_data=encrypted_message)
+        received_message = await communicator1.receive_from()
+        decrypted_response = self.encryptor.decrypt(received_message)
+        response1 = json.loads(decrypted_response)
         self.assertEqual(response1, {"message": [1, 3, 2, 5, 4, 7, 6, 8]})
 
         # connect second communicator
@@ -78,9 +86,12 @@ class TestWebSocket(TestCase):
         assert connected
         assert subprotocol is None
         # Test sending text
-        await communicator2.send_to(text_data="10 11 12 13 14 15 16 17 18")
-        response2 = await communicator2.receive_from()
-        response2 = json.loads(response2)
+        message = "10 11 12 13 14 15 16 17 18"
+        encrypted_message = self.encryptor.encrypt(message)
+        await communicator2.send_to(text_data=encrypted_message)
+        received_message = await communicator2.receive_from()
+        decrypted_response = self.encryptor.decrypt(received_message)
+        response2 = json.loads(decrypted_response)
         self.assertEqual(response2, {"message": [10, 12, 11, 14, 13, 16, 15, 18, 17]})
         # Close out communicator1
         await communicator1.disconnect()
@@ -100,15 +111,21 @@ class TestWebSocket(TestCase):
         self.assertTrue(connected2)
 
         # Test sending text out of order (for 2nd communicator first)
-        await communicator2.send_to(text_data="10 11 12 13 14 15 16 17 18")
-        response2 = await communicator2.receive_from()
-        response2 = json.loads(response2)
+        message = "10 11 12 13 14 15 16 17 18"
+        encrypted_message = self.encryptor.encrypt(message)
+        await communicator2.send_to(text_data=encrypted_message)
+        received_message = await communicator2.receive_from()
+        decrypted_response = self.encryptor.decrypt(received_message)
+        response2 = json.loads(decrypted_response)
         self.assertEqual(response2, {"message": [10, 12, 11, 14, 13, 16, 15, 18, 17]})
 
         # Test sending text for 1st communicator
-        await communicator1.send_to(text_data="1 2 3 4 5 6 7 8")
-        response1 = await communicator1.receive_from()
-        response1 = json.loads(response1)
+        message = "1 2 3 4 5 6 7 8"
+        encrypted_message = self.encryptor.encrypt(message)
+        await communicator1.send_to(text_data=encrypted_message)
+        received_message = await communicator1.receive_from()
+        decrypted_response = self.encryptor.decrypt(received_message)
+        response1 = json.loads(decrypted_response)
         self.assertEqual(response1, {"message": [1, 3, 2, 5, 4, 7, 6, 8]})
 
         # Close out communicator1

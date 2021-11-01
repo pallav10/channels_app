@@ -124,8 +124,9 @@ USE_L10N = True
 
 USE_TZ = True
 
-
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.1/howto/static-files/
 
 STATIC_URL = "/static/"
+
+ENCRYPTION_KEY = b"OhunhEmuFvzZM-L1fwj5alKt8fpTKJFFBUtcL0cJyM8="
